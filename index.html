@@ -316,7 +316,7 @@ window.renderBookList = function() {
   const list = document.getElementById('bookList');
   const filtered = books.filter(b => {
     const mQ = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.genre.toLowerCase().includes(q);
-    const mF = currentFilter==='all' || (currentFilter==='available' && isAvailable(b)) || (currentFilter==='borrowed' && !isAvailable(b));
+    const mF = currentFilter==='all' || (currentFilter==='available' && isAvailable(b)) || (currentFilter==='borrowed' && b.borrowed > 0);
     return mQ && mF;
   });
   if (!filtered.length) {
