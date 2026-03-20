@@ -495,23 +495,21 @@ window.sendMessage = async function() {
     const res = await fetch('https://broad-tree-ceb4.mehulghosh6.workers.dev', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, system:getLibraryContext(), messages:chatHistory })
+      body: JSON.stringify({ system:getLibraryContext(), messages:chatHistory })
     });
     const data = await res.json();
-    console.log('Worker response:', JSON.stringify(data));
     if (data.error) {
       typing.classList.remove('visible');
       appendMsg('assistant', 'Error: ' + (data.error.message || data.error));
       return;
     }
-    const reply = data.content?.find(c=>c.type==='text')?.text || 'Sorry, I had trouble responding.';
+    const reply = data.reply || 'Sorry, I had trouble responding.';
     typing.classList.remove('visible');
     appendMsg('assistant', reply);
     chatHistory.push({ role:'assistant', content:reply });
   } catch(e) {
     typing.classList.remove('visible');
     appendMsg('assistant', 'Error: ' + e.message);
-    console.error('Chat error:', e);
   }
 };
 
