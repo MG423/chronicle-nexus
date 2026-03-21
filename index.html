@@ -176,6 +176,73 @@
 
   @media (max-width: 1100px) { .chat-panel { display: none; } }
   @media (max-width: 800px) { .detail-panel { display: none; } .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); } }
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    header { padding: 0 16px; }
+    .logo { font-size: 20px; }
+    .nav-tabs { display: none; }
+
+    main { flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
+
+    /* all panels stack and fill full screen, only active one shows */
+    .center-col { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .detail-panel { display: flex !important; width: 100%; border-left: none; border-top: 1px solid var(--border); flex: 1; min-height: 0; }
+    .chat-panel { display: flex !important; width: 100%; border-left: none; border-top: 1px solid var(--border); flex: 1; min-height: 0; height: auto; }
+
+    /* hide all panels by default on mobile */
+    .mobile-hidden { display: none !important; }
+
+    /* stats bar compact */
+    .stats-bar { justify-content: space-around; }
+    .stat-item { padding: 10px 16px; }
+    .stat-val { font-size: 18px; }
+
+    /* search bar compact */
+    .search-filter-bar { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+    .search-wrap { max-width: 100%; }
+    .filter-row { width: 100%; justify-content: space-between; }
+    .filter-btn { flex: 1; padding: 6px 8px; font-size: 12px; }
+
+    /* book grid compact */
+    .book-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .book-grid-wrap { padding: 12px; }
+
+    /* bottom tab bar */
+    .mobile-tabs {
+      display: flex !important;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(13,15,20,0.98);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: color 0.15s;
+      border: none;
+      background: transparent;
+      font-family: var(--sans);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .mobile-tab.active { color: var(--accent); }
+    .mobile-tab svg { width: 20px; height: 20px; }
+
+    body { padding-bottom: 56px; }
+    main { height: calc(100vh - 56px - 56px); }
+  }
 </style>
 </head>
 <body>
@@ -368,6 +435,34 @@
     </div>
   </aside>
 </main>
+
+<!-- MOBILE BOTTOM TABS -->
+<div class="mobile-tabs" id="mobileTabs" style="display:none">
+  <button class="mobile-tab active" id="mtab-books" onclick="mobileTab('books')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/>
+    </svg>
+    Books
+  </button>
+  <button class="mobile-tab" id="mtab-add" onclick="mobileTab('add')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+    </svg>
+    Add
+  </button>
+  <button class="mobile-tab" id="mtab-detail" onclick="mobileTab('detail')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+    Detail
+  </button>
+  <button class="mobile-tab" id="mtab-chat" onclick="mobileTab('chat')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    AI Chat
+  </button>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -625,7 +720,68 @@ function appendMsg(role, text) {
 
 function scrollChat() { const c=document.getElementById('chatMessages'); c.scrollTop=c.scrollHeight; }
 
+// ── MOBILE ──
+function isMobile() { return window.innerWidth <= 600; }
+
+function mobileTab(tab) {
+  if (!isMobile()) return;
+  const browseView  = document.getElementById('browseView');
+  const addPanel    = document.getElementById('addPanel');
+  const detailPanel = document.getElementById('detailPanel');
+  const chatPanel   = document.querySelector('.chat-panel');
+  const centerCol   = document.querySelector('.center-col');
+  [browseView, addPanel, detailPanel, chatPanel, centerCol].forEach(el => { if(el) el.classList.add('mobile-hidden'); });
+  document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'books') {
+    centerCol.classList.remove('mobile-hidden');
+    browseView.style.display = 'flex';
+    browseView.classList.remove('mobile-hidden');
+    addPanel.classList.remove('active');
+    document.getElementById('mtab-books').classList.add('active');
+  } else if (tab === 'add') {
+    centerCol.classList.remove('mobile-hidden');
+    browseView.classList.add('mobile-hidden');
+    addPanel.classList.add('active');
+    document.getElementById('mtab-add').classList.add('active');
+  } else if (tab === 'detail') {
+    detailPanel.classList.remove('mobile-hidden');
+    document.getElementById('mtab-detail').classList.add('active');
+  } else if (tab === 'chat') {
+    chatPanel.classList.remove('mobile-hidden');
+    document.getElementById('mtab-chat').classList.add('active');
+  }
+}
+
+function initMobile() {
+  if (isMobile()) {
+    document.getElementById('mobileTabs').style.display = 'flex';
+    mobileTab('books');
+  }
+}
+
+const _origSelect = window.selectBook;
+window.selectBook = function(id) {
+  _origSelect(id);
+  if (isMobile()) mobileTab('detail');
+};
+
+window.addEventListener('resize', () => {
+  const tabs = document.getElementById('mobileTabs');
+  if (isMobile()) {
+    tabs.style.display = 'flex';
+    mobileTab('books');
+  } else {
+    tabs.style.display = 'none';
+    ['browseView','detailPanel'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.classList.remove('mobile-hidden');
+    });
+    document.querySelector('.chat-panel')?.classList.remove('mobile-hidden');
+    document.querySelector('.center-col')?.classList.remove('mobile-hidden');
+  }
+});
+
 loadBooks();
+initMobile();
 </script>
 </body>
 </html>
