@@ -174,7 +174,7 @@
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  @media (max-width: 1100px) { .chat-panel { display: none; } }
+  @media (max-width: 1100px) { .chat-panel:not(.mob-active) { display: none; } }
   @media (max-width: 800px) { .detail-panel { display: none; } .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); } }
 
   /* ── MOBILE ── */
@@ -222,8 +222,9 @@
     .mob-inner-hidden { display: none !important; }
 
     /* book grid */
+    #browseView { overflow: hidden; }
     .book-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .book-grid-wrap { padding: 12px; flex: 1; overflow-y: auto; }
+    .book-grid-wrap { padding: 12px; flex: 1; overflow-y: auto; min-height: 0; }
 
     /* add panel */
     .add-panel { padding: 20px 16px; }
@@ -313,7 +314,7 @@
     </div>
 
     <!-- BROWSE VIEW -->
-    <div id="browseView" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div id="browseView" style="display:flex;flex-direction:column;flex:1;min-height:0;">
       <div class="search-filter-bar">
         <div class="search-wrap">
           <span class="search-icon">⌕</span>
