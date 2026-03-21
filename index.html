@@ -723,7 +723,7 @@ function scrollChat() { const c=document.getElementById('chatMessages'); c.scrol
 // ── MOBILE ──
 function isMobile() { return window.innerWidth <= 600; }
 
-function mobileTab(tab) {
+window.mobileTab = function mobileTab(tab) {
   if (!isMobile()) return;
   const browseView  = document.getElementById('browseView');
   const addPanel    = document.getElementById('addPanel');
