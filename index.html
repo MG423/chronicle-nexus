@@ -218,6 +218,9 @@
     .filter-row { width: 100%; }
     .filter-btn { flex: 1; padding: 6px 4px; font-size: 11px; }
 
+    /* inner visibility */
+    .mob-inner-hidden { display: none !important; }
+
     /* book grid */
     .book-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .book-grid-wrap { padding: 12px; flex: 1; overflow-y: auto; }
@@ -759,20 +762,24 @@ window.mobileTab = function mobileTab(tab) {
   const browseView  = document.getElementById('browseView');
   const addPanel    = document.getElementById('addPanel');
 
-  // deactivate all panels
+  // strip ALL inline display styles so CSS classes take full control
+  [centerCol, detailPanel, chatPanel, browseView, addPanel].forEach(el => {
+    if (el) el.style.display = '';
+  });
+
+  // deactivate all top panels
   [centerCol, detailPanel, chatPanel].forEach(el => el.classList.remove('mob-active'));
+  addPanel.classList.remove('active');
   document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
 
   if (tab === 'books') {
     centerCol.classList.add('mob-active');
-    browseView.style.display = 'flex';
-    addPanel.style.display   = 'none';
+    browseView.classList.remove('mob-inner-hidden');
     addPanel.classList.remove('active');
     document.getElementById('mtab-books').classList.add('active');
   } else if (tab === 'add') {
     centerCol.classList.add('mob-active');
-    browseView.style.display = 'none';
-    addPanel.style.display   = 'block';
+    browseView.classList.add('mob-inner-hidden');
     addPanel.classList.add('active');
     document.getElementById('mtab-add').classList.add('active');
   } else if (tab === 'detail') {
@@ -804,15 +811,17 @@ window.addEventListener('resize', () => {
     mobileTab('books');
   } else {
     tabs.classList.remove('show');
+    // restore desktop — clear all mobile classes and inline styles
     const centerCol   = document.querySelector('.center-col');
     const detailPanel = document.getElementById('detailPanel');
     const chatPanel   = document.querySelector('.chat-panel');
-    [centerCol, detailPanel, chatPanel].forEach(el => {
-      if (el) { el.classList.remove('mob-active'); el.style.display = ''; }
+    const browseView  = document.getElementById('browseView');
+    const addPanel    = document.getElementById('addPanel');
+    [centerCol, detailPanel, chatPanel, browseView, addPanel].forEach(el => {
+      if (el) { el.classList.remove('mob-active','mob-inner-hidden'); el.style.display = ''; }
     });
-    document.getElementById('browseView').style.display = 'flex';
-    document.getElementById('addPanel').style.display   = 'none';
-    document.getElementById('addPanel').classList.remove('active');
+    addPanel.classList.remove('active');
+    browseView.style.display = 'flex';
   }
 });
 
