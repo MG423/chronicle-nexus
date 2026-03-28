@@ -277,6 +277,36 @@
     .mobile-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .mobile-tab svg { width: 16px; height: 16px; }
   }
+
+  /* BORROW MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-lg); padding: 28px;
+    width: 90%; max-width: 360px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .modal-title { font-family: var(--display); font-size: 18px; font-weight: 700; }
+  .modal-subtitle { font-size: 13px; color: var(--text-muted); margin-top: -8px; }
+  .modal-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); font-family: var(--sans);
+    font-size: 14px; padding: 10px 14px; outline: none; transition: border 0.18s; width: 100%;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-input::placeholder { color: var(--text-dim); }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-confirm { flex: 1; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .modal-confirm:hover { background: #8099ff; }
+  .modal-cancel { padding: 10px 16px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--sans); font-size: 14px; cursor: pointer; }
+  .modal-cancel:hover { background: var(--surface2); }
+  .badge-overdue { border-color: var(--danger); color: var(--danger); }
+  .overdue-card { border-color: rgba(248,113,113,0.4) !important; }
 </style>
 </head>
 <body>
@@ -500,6 +530,20 @@
 </main>
 <div class="toast" id="toast"></div>
 
+<!-- BORROW MODAL -->
+<div class="modal-overlay" id="borrowModal">
+  <div class="modal">
+    <div class="modal-title">Borrow Book</div>
+    <div class="modal-subtitle" id="modalBookTitle"></div>
+    <input class="modal-input" id="borrowerName" placeholder="Your name" maxlength="60"
+      onkeydown="if(event.key==='Enter')confirmBorrow()">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeBorrowModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmBorrow()">Confirm Borrow</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -557,13 +601,17 @@ window.renderBookList = function() {
   grid.innerHTML = filtered.map((b, i) => {
     const gs = genreStyle(b.genre);
     const idx = books.findIndex(x => x.id === b.id);
-    return `<div class="book-card${b.id===selectedBookId?' selected':''}" onclick="selectBook('${b.id}')" id="card-${b.id}">
+    const od = isOverdue(b);
+    const statusHtml = od
+      ? '<span style="font-size:9px;color:var(--danger);font-weight:700;margin-left:auto;letter-spacing:0.5px">OVERDUE</span>'
+      : `<div class="status-dot ${isAvailable(b)?'available':'borrowed'}" style="margin-left:auto"></div>`;
+    return `<div class="book-card${b.id===selectedBookId?' selected':''}${od?' overdue-card':''}" onclick="selectBook('${b.id}')" id="card-${b.id}">
       <div class="book-cover-mini" style="background:${coverBg(idx)}">${b.title.split(' ').slice(0,4).join(' ')}</div>
       <div class="book-title">${b.title}</div>
       <div class="book-author">${b.author}</div>
       <div class="book-meta">
         <span class="genre-tag" style="color:${gs.hue};border-color:${gs.hue};background:${gs.bg}">${b.genre}</span>
-        <div class="status-dot ${isAvailable(b)?'available':'borrowed'}"></div>
+        ${statusHtml}
       </div>
     </div>`;
   }).join('');
@@ -584,11 +632,22 @@ window.selectBook = function(id) {
   showBookDetail(b);
 };
 
+function isOverdue(b) {
+  if (!b.due_date || b.borrowed === 0) return false;
+  return new Date(b.due_date) < new Date();
+}
+
+function formatDate(d) {
+  if (!d) return 'N/A';
+  return new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+}
+
 function showBookDetail(b) {
   document.getElementById('emptyDetail').style.display = 'none';
   const detail = document.getElementById('bookDetail');
   detail.style.display = 'block';
   const avail = isAvailable(b);
+  const overdue = isOverdue(b);
   const idx = books.findIndex(x=>x.id===b.id);
   detail.innerHTML = `
     <div class="detail-cover" style="background:${coverBg(idx)}">${b.title}</div>
@@ -597,6 +656,7 @@ function showBookDetail(b) {
     <div class="detail-badges">
       <span class="badge badge-genre">${b.genre}</span>
       <span class="badge ${avail?'badge-available':'badge-borrowed'}">${avail?'Available':'Fully Borrowed'}</span>
+      ${overdue?'<span class="badge badge-overdue">⚠ Overdue</span>':''}
     </div>
     <div class="action-btns">
       ${avail?`<button class="action-btn btn-borrow" onclick="borrowBook('${b.id}')">Borrow</button>`:''}
@@ -605,7 +665,13 @@ function showBookDetail(b) {
     </div>
     <div class="section-label">Description</div>
     <div class="detail-desc">${b.description||'No description available.'}</div>
-    <div class="section-label">Details</div>
+    ${b.borrower_name||b.due_date?`
+    <div class="section-label">Borrow Info</div>
+    <div class="detail-grid">
+      <div class="detail-field"><div class="field-label">Borrower</div><div class="field-value">${b.borrower_name||'Unknown'}</div></div>
+      <div class="detail-field"><div class="field-label">Due Date</div><div class="field-value" style="color:${overdue?'var(--danger)':'var(--accent3)'}">${formatDate(b.due_date)}</div></div>
+    </div>`:''}
+    <div class="section-label" style="margin-top:16px">Details</div>
     <div class="detail-grid">
       <div class="detail-field"><div class="field-label">Year</div><div class="field-value">${b.year||'Unknown'}</div></div>
       <div class="detail-field"><div class="field-label">ISBN</div><div class="field-value" style="font-size:11px">${b.isbn||'N/A'}</div></div>
@@ -614,22 +680,55 @@ function showBookDetail(b) {
     </div>`;
 }
 
-window.borrowBook = async function(id) {
+let pendingBorrowId = null;
+
+window.borrowBook = function(id) {
   const b = books.find(x=>x.id===id);
   if (!b || !isAvailable(b)) { showToast('No copies available','error'); return; }
-  const { error } = await sb.from('books').update({ borrowed: b.borrowed+1 }).eq('id', id);
+  pendingBorrowId = id;
+  document.getElementById('modalBookTitle').textContent = b.title;
+  document.getElementById('borrowerName').value = '';
+  document.getElementById('borrowModal').classList.add('show');
+  setTimeout(() => document.getElementById('borrowerName').focus(), 100);
+};
+
+window.closeBorrowModal = function() {
+  document.getElementById('borrowModal').classList.remove('show');
+  pendingBorrowId = null;
+};
+
+window.confirmBorrow = async function() {
+  const name = document.getElementById('borrowerName').value.trim();
+  if (!name) { document.getElementById('borrowerName').focus(); return; }
+  const id = pendingBorrowId;
+  const b = books.find(x=>x.id===id);
+  if (!b) return;
+  closeBorrowModal();
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
+  const dueDateStr = dueDate.toISOString().split('T')[0];
+  const { error } = await sb.from('books').update({
+    borrowed: b.borrowed+1,
+    borrower_name: name,
+    due_date: dueDateStr,
+  }).eq('id', id);
   if (error) { showToast('Failed to update','error'); return; }
   b.borrowed++;
-  showToast(`"${b.title}" borrowed!`,'success');
+  b.borrower_name = name;
+  b.due_date = dueDateStr;
+  showToast(`"${b.title}" borrowed by ${name}!`,'success');
   renderBookList(); updateStats(); showBookDetail(b);
 };
 
 window.returnBook = async function(id) {
   const b = books.find(x=>x.id===id);
   if (!b || b.borrowed===0) { showToast('No borrowed copies to return','error'); return; }
-  const { error } = await sb.from('books').update({ borrowed: b.borrowed-1 }).eq('id', id);
+  const updates = { borrowed: b.borrowed-1 };
+  if (b.borrowed-1 === 0) { updates.borrower_name = null; updates.due_date = null; }
+  const { error } = await sb.from('books').update(updates).eq('id', id);
   if (error) { showToast('Failed to update','error'); return; }
   b.borrowed--;
+  if (b.borrowed === 0) { b.borrower_name = null; b.due_date = null; }
   showToast(`Copy returned!`,'success');
   renderBookList(); updateStats(); showBookDetail(b);
 };
